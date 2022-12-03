@@ -64,6 +64,24 @@ func (this *GList[Any]) DropChunk(from int, until int) *GList[Any] {
 	return this
 }
 
+func (this *GList[Any]) Clone() *GList[Any] {
+	var r GList[Any]
+	r = *this
+	return &r
+}
+
+// DropIf method deletes elements if the given condition be satisfied
+func (this *GList[Any]) DropIf(fn func(Any) bool) {
+	//n := this.Clone()
+	count := 0
+	for index := this.Count() - 1; index > 0; index-- {
+		if fn(this.Get(index)) {
+			this.DropAt(index)
+			count++
+		}
+	}
+}
+
 // Clear method empty the list
 func (this *GList[Any]) Clear() {
 	*this = (*this)[:0]
