@@ -77,6 +77,7 @@ func (this *GList[Any]) DropIf(fn func(Any) bool) {
 	}
 }
 
+// IndexOf looks for the index of some object, if it ain't in the list IndexOf retuns '-1'
 func (this *GList[Any]) IndexOf(obj Any) int {
 	obj1, _ := json.Marshal(obj)
 	for i, one := range *this {
@@ -95,26 +96,10 @@ func (this *GList[Any]) IndexOf(obj Any) int {
 	return -1
 }
 
+// ContainsAll method checks if all given elements are into the list
 func (this *GList[Any]) ContainsAll(objs ...Any) bool {
 	for _, one := range objs {
-		scan := false
-		oneJson, _ := json.Marshal(one)
-		for _, intoList := range *this {
-			if &one == &intoList {
-				scan = true
-				break
-			} else {
-				if intoListJson, err := json.Marshal(intoList); err != nil {
-					panic("Object cannot be compared")
-				} else {
-					if string(oneJson) == string(intoListJson) {
-						scan = true
-						break
-					}
-				}
-			}
-		}
-		if !scan {
+		if i := this.IndexOf(one); i == -1 {
 			return false
 		}
 	}
