@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -11,6 +12,23 @@ type GList[Any any] []Any
 func NewGList[Any any](obj ...Any) *GList[Any] {
 	l := (*GList[Any])(&[]Any{})
 	return l.Add(obj...)
+}
+
+// Reverse method reverses the postition of all elements, so the start will be the end, and the end, the begining
+func (this *GList[Any]) Reverse() *GList[Any] {
+	if this.Count() < 2 {
+		return this
+	} else {
+		reordered := *this.Clone()
+		for i := range *this {
+			i = i
+			l := reordered.Sublist(i, reordered.LastIndexOf())
+			reordered = append(*reordered.Sublist(0, i), reordered.Last())
+			reordered.Add(*l...)
+		}
+		*this = reordered
+		return &reordered
+	}
 }
 
 // Add method adds one or many objects on the end of the list.
@@ -70,7 +88,7 @@ func (this *GList[Any]) DropIf(fn func(Any) bool) {
 	//n := this.Clone()
 	count := 0
 	for index := this.Count() - 1; index > 0; index-- {
-		if fn(this.Get(index)) {
+		if fn(this.Get(index)) == true {
 			this.DropAt(index)
 			count++
 		}
@@ -107,15 +125,14 @@ func (this *GList[Any]) ContainsAll(objs ...Any) bool {
 }
 
 // Clear method empty the list
-func (this *GList[Any]) Clear() {
-	*this = (*this)[:0]
+func (this *GList[Any]) Clear() *GList[Any] {
+	*this = *NewGList[Any]()
+	return this
 }
 
 // Clone method creates a copy of the list
 func (this *GList[Any]) Clone() *GList[Any] {
-	var r GList[Any]
-	r = *this
-	return &r
+	return NewGList[Any](*this...)
 }
 
 // Stringify method converts the list into string
@@ -133,6 +150,15 @@ func (this *GList[Any]) Count() int {
 	return len(*this)
 }
 
+func (this *GList[Any]) LastIndexOf() int {
+	l := this.Count() - 1
+	if l <= 0 {
+		return 0
+	} else {
+		return l
+	}
+}
+
 // IsEmpty method checks if the list is empty
 func (this *GList[Any]) IsEmpty() bool {
 	return len(*this) == 0
@@ -140,15 +166,57 @@ func (this *GList[Any]) IsEmpty() bool {
 
 // First method reuturns the firt element os the list
 func (this *GList[Any]) First() Any {
-	return (*this)[0]
+	if this.Count() == 0 {
+		panic(errors.New("an empty list can't use 'First()' method"))
+	} else {
+		return (*this)[0]
+	}
 }
 
 // Last method reuturns the last element os the list
 func (this *GList[Any]) Last() Any {
-	return (*this)[this.Count()-1]
+	if this.Count() == 0 {
+		panic(errors.New("an empty list can't use 'Last()' method"))
+	} else {
+		ret := (*this)[this.Count()-1]
+		return ret
+	}
 }
 
-// func (this *GList[Any]) () { }
-// func (this *GList[Any]) () { }
-// func (this *GList[Any]) () { }
-// func (this *GList[Any]) () { }
+// Sublist creates a new list based on the given range
+func (this *GList[Any]) Sublist(from int, until int) *GList[Any] {
+	sub := NewGList[Any]((*this)[from:until]...)
+	return sub
+}
+
+// Partition method splits the list into 2 sublist and the elements will be put into each based on given condition
+func (this *GList[Any]) Partition(fn func(Any) bool) (*GList[Any], *GList[Any]) {
+	ret1 := NewGList[Any]()
+	ret2 := NewGList[Any]()
+	for _, one := range *this {
+		if fn(one) == true {
+			ret1.Add(one)
+		} else {
+			ret2.Add(one)
+		}
+	}
+	return ret1, ret2
+}
+
+// ForEach will iterate your array in a more clean, confortable and readable way, just like Java or TypeScript
+func (this *GList[Any]) ForEach(fn func(index int, obj Any)) {
+	for i, one := range *this {
+		fn(i, one)
+	}
+}
+
+// Filter method will return a new list with elements satisfing the given condition
+func (this *GList[Any]) Filter(fn func(obj Any) bool) *GList[Any] {
+	ret := NewGList[Any]()
+	this.ForEach(func(i int, one Any) {
+		if fn(one) == true {
+			ret.Add(one)
+		}
+	})
+	return ret
+}
