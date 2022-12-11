@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
+	"strconv"
 )
 
 type GList[Any any] []Any
@@ -201,6 +203,49 @@ func (this *GList[Any]) Partition(fn func(Any) bool) (*GList[Any], *GList[Any]) 
 		}
 	}
 	return ret1, ret2
+}
+
+// QuickSort will order the list by default parameters
+func (this *GList[Any]) QuickSort() *GList[Any] {
+	kindList := NewGList[reflect.Kind](
+		reflect.Invalid,
+		reflect.Array,
+		reflect.Chan,
+		reflect.Func,
+		reflect.Map,
+		reflect.Pointer,
+		reflect.Slice,
+		reflect.UnsafePointer)
+	if this.Count() < 2 {
+		return this
+	} else {
+		pivot := this.First()
+		smaller, greater := this.Drop(1).Partition(func(obj Any) bool {
+			if kindList.ContainsAll(reflect.TypeOf(obj).Kind()) {
+				panic("Unsortable Glist, this type cannot be processed")
+			} else {
+				typeId := reflect.ValueOf(obj).Kind()
+				if typeId == reflect.Bool {
+					return fmt.Sprintf("%v", obj)[0] == 'f'
+				} else if typeId >= reflect.Int && typeId <= reflect.Complex128 {
+					n1, _ := strconv.ParseFloat(fmt.Sprintf("%v", obj), 64)
+					n2, _ := strconv.ParseFloat(fmt.Sprintf("%v", pivot), 64)
+					return n1 <= n2
+				} else if typeId == reflect.Interface || typeId == reflect.Struct {
+					if reflect.ValueOf(obj).NumField() <= 0 {
+						panic("Unsortable Glist, this type cannot be processed")
+					} else {
+						n1 := fmt.Sprintf("%v", reflect.ValueOf(obj).Field(0))[0]
+						n2 := fmt.Sprintf("%v", reflect.ValueOf(pivot).Field(0))[0]
+						return n1 <= n2
+					}
+				} else {
+					return (int)(fmt.Sprintf("%v", obj)[0]) <= (int)(fmt.Sprintf("%v", pivot)[0])
+				}
+			}
+		})
+		return smaller.QuickSort().Add(pivot).Add(*greater.QuickSort()...)
+	}
 }
 
 // ForEach will iterate your array in a more clean, confortable and readable way, just like Java or TypeScript
