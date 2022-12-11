@@ -4,11 +4,26 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 )
 
 type GList[Any any] []Any
+
+func Equals(obj1 any, obj2 any) bool {
+	if &obj1 == &obj2 {
+		return true
+	} else {
+		json1, err1 := json.Marshal(obj1)
+		json2, err2 := json.Marshal(obj2)
+		if err1 != nil || err2 != nil {
+			panic("Object cannot be compared")
+		} else {
+			return string(json1) == string(json2)
+		}
+	}
+}
 
 // NewGList method creates am instance of GList
 func NewGList[Any any](obj ...Any) *GList[Any] {
@@ -89,7 +104,7 @@ func (this *GList[Any]) DropChunk(from int, until int) *GList[Any] {
 func (this *GList[Any]) DropIf(fn func(Any) bool) {
 	//n := this.Clone()
 	count := 0
-	for index := this.Count() - 1; index > 0; index-- {
+	for index := this.LastIndexOf(); index >= 0; index-- {
 		if fn(this.Get(index)) == true {
 			this.DropAt(index)
 			count++
@@ -97,20 +112,36 @@ func (this *GList[Any]) DropIf(fn func(Any) bool) {
 	}
 }
 
+// DropElement method delete elements from list by counting, if it's negative, the count starts from the ending
+func (this *GList[Any]) DropElement(obj Any, howMany int) *GList[Any] {
+	counter := 0
+	if howMany > this.Count() {
+		howMany = this.Count()
+	}
+	if howMany > 0 {
+		this.Reverse()
+	}
+	this.DropIf(func(one Any) bool {
+		limit := (int)(math.Sqrt(float64(howMany * howMany)))
+		println(limit)
+		if Equals(obj, one) && counter < limit {
+			counter++
+			return true
+		} else {
+			return false
+		}
+	})
+	if howMany > 0 {
+		this.Reverse()
+	}
+	return this
+}
+
 // IndexOf looks for the index of some object, if it ain't in the list IndexOf retuns '-1'
 func (this *GList[Any]) IndexOf(obj Any) int {
-	obj1, _ := json.Marshal(obj)
 	for i, one := range *this {
-		if &obj == &one {
+		if Equals(obj, one) {
 			return i
-		} else {
-			if obj2, err := json.Marshal(one); err != nil {
-				panic("Object cannot be compared")
-			} else {
-				if string(obj1) == string(obj2) {
-					return i
-				}
-			}
 		}
 	}
 	return -1
@@ -216,7 +247,7 @@ func (this *GList[Any]) QuickSort() *GList[Any] {
 		reflect.Pointer,
 		reflect.Slice,
 		reflect.UnsafePointer)
-	if this.Count() < 2 {
+	if this.Count() < 2 || ((reflect.ValueOf(this.Get(0)).Kind() == reflect.Interface || reflect.ValueOf(this.Get(0)).Kind() == reflect.Struct) && reflect.ValueOf(this.Get(0)).NumField() <= 0) {
 		return this
 	} else {
 		pivot := this.First()
@@ -232,13 +263,9 @@ func (this *GList[Any]) QuickSort() *GList[Any] {
 					n2, _ := strconv.ParseFloat(fmt.Sprintf("%v", pivot), 64)
 					return n1 <= n2
 				} else if typeId == reflect.Interface || typeId == reflect.Struct {
-					if reflect.ValueOf(obj).NumField() <= 0 {
-						panic("Unsortable Glist, this type cannot be processed")
-					} else {
-						n1 := fmt.Sprintf("%v", reflect.ValueOf(obj).Field(0))[0]
-						n2 := fmt.Sprintf("%v", reflect.ValueOf(pivot).Field(0))[0]
-						return n1 <= n2
-					}
+					n1 := fmt.Sprintf("%v", reflect.ValueOf(obj).Field(0))[0]
+					n2 := fmt.Sprintf("%v", reflect.ValueOf(pivot).Field(0))[0]
+					return n1 <= n2
 				} else {
 					return (int)(fmt.Sprintf("%v", obj)[0]) <= (int)(fmt.Sprintf("%v", pivot)[0])
 				}
