@@ -292,3 +292,12 @@ func (this *GList[Any]) Filter(fn func(obj Any) bool) *GList[Any] {
 	})
 	return ret
 }
+
+// Map method will return a new list with elements produced from the given function
+func (this *GList[Any]) Map(fn func(obj Any) any) *GList[any] {
+	ret := NewGList[any]()
+	this.ForEach(func(i int, obj Any) {
+		ret.Add(fn(obj))
+	})
+	return ret
+}
